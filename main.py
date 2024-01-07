@@ -8,8 +8,8 @@ FILES_SUPPORTED = 'JPG|PNG|JPEG'
 LOGGER_ENABLED = os.getenv('LOGGER_ENABLED', True)
 DIRECTORY_PATH = os.getenv('DIRECTORY_PATH', './photos')
 S3_NAME = os.getenv('BUCKET_NAME', 'elocs-backend-331514516496')
-AWS_KEY_ID=os.getenv('AWS_KEY_ID')
-AWS_SECRET_KEY=os.getenv('AWS_SECRET_KEY')
+AWS_KEY_ID = os.getenv('AWS_KEY_ID')
+AWS_SECRET_KEY = os.getenv('AWS_SECRET_KEY')
 
 
 def log(enabled: bool = LOGGER_ENABLED, text: any = ''):
