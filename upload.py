@@ -38,7 +38,6 @@ def create_key(path):
 def upload(client, bucket, path, key):
     global num_threads
     num_threads += 1
-    logging.debug(f'Open thread')
 
     try:
         client.head_object(Bucket=bucket, Key=key)
