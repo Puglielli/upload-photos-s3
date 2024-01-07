@@ -1,3 +1,4 @@
+import _thread
 import logging
 import os
 import re
@@ -14,6 +15,9 @@ ROOT_DIRECTORY = os.getenv('ROOT_DIRECTORY', None)
 AWS_KEY_ID = os.getenv('AWS_KEY_ID')
 AWS_SECRET_KEY = os.getenv('AWS_SECRET_KEY')
 S3_NAME = os.getenv('BUCKET_NAME', 'elocs-backend-331514516496')
+
+# Threads
+num_threads = 0
 
 
 def build_client():
@@ -32,6 +36,10 @@ def create_key(path):
 
 
 def upload(client, bucket, path, key):
+    global num_threads
+    num_threads += 1
+    logging.debug(f'Open thread')
+
     try:
         client.head_object(Bucket=bucket, Key=key)
         logging.debug(f'File {key} already exists')
@@ -47,8 +55,10 @@ def upload(client, bucket, path, key):
     except Exception as e:
         logging.error(f'Exception Error: {e}')
 
+    num_threads -= 1
 
-def run(root_path, bucket_name):
+
+def run(root_path=DIRECTORY_PATH, bucket_name=S3_NAME, enable_threads=False):
     try:
         for root, dirs, files in os.walk(root_path):
             for file in files:
@@ -58,27 +68,9 @@ def run(root_path, bucket_name):
 
                     logging.debug(f'Path: {path}; Key: {key}')
 
-                    upload(client=build_client(), bucket=bucket_name, path=path, key=key)
+                    if enable_threads:
+                        _thread.start_new_thread(upload, (build_client(), bucket_name, path, key))
+                    else:
+                        upload(client=build_client(), bucket=bucket_name, path=path, key=key)
     except Exception as e:
         logging.error(f"Error: {e}", stack_info=True)
-
-
-if __name__ == "__main__":
-    logging.info(
-        f"""
-        Starting service with properties:
-            OS_NAME: {os.name}
-            OS_NODENAME: {os.uname().nodename}
-            OS_MACHINE: {os.uname().machine}
-            OS_SYSNAME: {os.uname().sysname}
-            OS_SEP: {os.sep}
-            LOGGER_LEVEL: {LOGGER_LEVEL}
-            FILES_SUPPORTED: {FILES_SUPPORTED}
-            DIRECTORY_PATH: {DIRECTORY_PATH}
-            ROOT_DIRECTORY: {ROOT_DIRECTORY}
-            AWS_KEY_ID: ***
-            AWS_SECRET_KEY: ***
-            S3_NAME: {S3_NAME}
-        """
-    )
-    run(root_path=DIRECTORY_PATH, bucket_name=S3_NAME)

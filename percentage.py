@@ -1,3 +1,4 @@
+import _thread
 import logging
 import os
 import re
@@ -16,6 +17,9 @@ AWS_SECRET_KEY = os.getenv('AWS_SECRET_KEY')
 S3_NAME = os.getenv('BUCKET_NAME', 'elocs-backend-331514516496')
 
 FILES_COUNT = {}
+
+# Threads
+num_threads = 0
 
 
 def build_client():
@@ -38,11 +42,15 @@ def get_paths(path):
 
 
 def count_files(client, bucket, file_name, paths, size):
+    global num_threads
+    num_threads += 1
+
     key = paths['key']
-    directory = f"{paths['root']}{paths['remaining'].replace(file_name, '')}"
-    files_directory = FILES_COUNT.get(directory, {'total': size})
+
     try:
         client.head_object(Bucket=bucket, Key=key)
+        directory = f"{paths['root']}{paths['remaining'].replace(file_name, '')}"
+        files_directory = FILES_COUNT.get(directory, {'total': size})
         in_cloud = files_directory.get('in_cloud', 0)
         in_cloud += 1
         files_directory['in_cloud'] = in_cloud
@@ -59,8 +67,10 @@ def count_files(client, bucket, file_name, paths, size):
     except Exception as e:
         logging.error(f'Exception Error: {e}')
 
+    num_threads -= 1
 
-def run(root_path, bucket_name):
+
+def run(root_path=DIRECTORY_PATH, bucket_name=S3_NAME, enable_threads=False):
     try:
         for root, dirs, files in os.walk(root_path):
             for file in files:
@@ -68,49 +78,30 @@ def run(root_path, bucket_name):
                     path = os.path.join(root, file)
                     paths = get_paths(path=path)
                     only_photos = list(
-                        filter(lambda x: re.match(pattern=f".*({FILES_SUPPORTED})$", string=x.upper()), files))
+                        filter(lambda x: re.match(pattern=f".*({FILES_SUPPORTED})$", string=x.upper()), files)
+                    )
 
                     logging.debug(f'Paths: {paths}')
 
-                    count_files(
-                        client=build_client(),
-                        bucket=bucket_name,
-                        file_name=file,
-                        paths=paths,
-                        size=len(only_photos)
-                    )
+                    if enable_threads:
+                        _thread.start_new_thread(
+                            count_files,
+                            (
+                                build_client(),
+                                bucket_name,
+                                file,
+                                paths,
+                                len(only_photos)
+                            )
+                        )
+                    else:
+                        count_files(
+                            client=build_client(),
+                            bucket=bucket_name,
+                            file_name=file,
+                            paths=paths,
+                            size=len(only_photos)
+                        )
+
     except Exception as e:
         logging.error(f"Error: {e}", stack_info=True)
-
-
-if __name__ == "__main__":
-    logging.info(
-        f"""
-        Starting service with properties:
-            OS_NAME: {os.name}
-            OS_NODENAME: {os.uname().nodename}
-            OS_MACHINE: {os.uname().machine}
-            OS_SYSNAME: {os.uname().sysname}
-            OS_SEP: {os.sep}
-            LOGGER_LEVEL: {LOGGER_LEVEL}
-            FILES_SUPPORTED: {FILES_SUPPORTED}
-            DIRECTORY_PATH: {DIRECTORY_PATH}
-            ROOT_DIRECTORY: {ROOT_DIRECTORY}
-            AWS_KEY_ID: ***
-            AWS_SECRET_KEY: ***
-            S3_NAME: {S3_NAME}
-        """
-    )
-    run(root_path=DIRECTORY_PATH, bucket_name=S3_NAME)
-    logging.debug(f'Files: {FILES_COUNT}')
-    in_cloud = sum(list(map(lambda x: x['in_cloud'], list(FILES_COUNT.values()))))
-    total = sum(list(map(lambda x: x['total'], list(FILES_COUNT.values()))))
-    percentage = (in_cloud / total) * 100
-    logging.info(
-        f"""
-        Files Statistic:
-            Percentage in aws sync: {percentage}%
-            Total local files: {total}
-            Total in AWS: {in_cloud}
-        """
-    )
