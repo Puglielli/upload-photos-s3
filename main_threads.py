@@ -9,7 +9,8 @@ FILES_SUPPORTED = 'JPG|PNG|JPEG'
 LOGGER_ENABLED = os.getenv('LOGGER_ENABLED', False)
 DIRECTORY_PATH = os.getenv('DIRECTORY_PATH', './photos')
 S3_NAME = os.getenv('BUCKET_NAME', 'elocs-backend-331514516496')
-
+AWS_KEY_ID=os.getenv('AWS_KEY_ID')
+AWS_SECRET_KEY=os.getenv('AWS_SECRET_KEY')
 num_thread = 0
 
 
@@ -46,8 +47,8 @@ def upload(client, path, bucket):
 def upload_directory(root_path, bucket_name):
     s3 = boto3.client(
         's3',
-        aws_access_key_id='AKIAU2L6OCQIKQ2GGEVT',
-        aws_secret_access_key='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'
+        aws_access_key_id=AWS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_KEY
     )
 
     for root, dirs, files in os.walk(root_path):

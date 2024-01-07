@@ -8,6 +8,8 @@ FILES_SUPPORTED = 'JPG|PNG|JPEG'
 LOGGER_ENABLED = os.getenv('LOGGER_ENABLED', True)
 DIRECTORY_PATH = os.getenv('DIRECTORY_PATH', './photos')
 S3_NAME = os.getenv('BUCKET_NAME', 'elocs-backend-331514516496')
+AWS_KEY_ID=os.getenv('AWS_KEY_ID')
+AWS_SECRET_KEY=os.getenv('AWS_SECRET_KEY')
 
 
 def log(enabled: bool = LOGGER_ENABLED, text: any = ''):
@@ -47,8 +49,8 @@ def create_key(path):
 def run(root_path, bucket_name):
     s3 = boto3.client(
         service='s3',
-        aws_access_key_id='AKIAU2L6OCQIKQ2GGEVT',
-        aws_secret_access_key='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'
+        aws_access_key_id=AWS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_KEY,
     )
 
     for root, dirs, files in os.walk(root_path):
